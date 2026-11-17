@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentiKampus</title>
+    <!-- Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white min-h-screen flex flex-col justify-between text-gray-800">
+
+    <div class="max-w-4xl mx-auto p-8 w-full mt-4">
+        <!-- Judul Utama -->
+        <h1 class="text-xl font-medium text-gray-800 mb-6">SentiKampus</h1>
+        
+        <!-- Bagian Input Komentar -->
+        <div class="mb-4">
+            <h2 class="text-lg font-semibold text-gray-900 mb-1">Analisis Sentimen Komentar</h2>
+            <p class="text-sm text-gray-500 mb-3">Masukkan komentar 3–500 karakter.</p>
+            
+            <textarea id="commentInput" rows="5" maxlength="500" oninput="updateCharCount()"
+                class="w-full p-4 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 text-gray-700 resize-none shadow-sm"
+                placeholder="Pelayanan Kampus bagus">Pelayanan Kampus bagus</textarea>
+            
+            <div class="text-right text-xs text-gray-400 mt-1" id="charCount">23/500</div>
+        </div>
+
+        <!-- Tombol Prediksi -->
+        <button onclick="kirimPrediksi()" 
+            class="w-full py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 font-medium rounded-lg transition duration-150 shadow-sm">
+            Prediksi
+        </button>
+
+        <!-- Kotak Status / Pesan Error (Aman dari tutup otomatis) -->
+        <div id="resultBox" class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-600 text-sm hidden">
+        </div>
+    </div>
+
+    <script>
+        // Fungsi menghitung jumlah karakter
+        function updateCharCount() {
+            const text = document.getElementById('commentInput').value;
+            document.getElementById('charCount').innerText = `${text.length}/500`;
+        }
+
+        // Fungsi utama saat tombol Prediksi diklik
+        async function kirimPrediksi() {
+            const text = document.getElementById('commentInput').value.trim();
+            const resultBox = document.getElementById('resultBox');
+            
+            // Tampilkan kotak hasil/pesan
+            resultBox.classList.remove('hidden');
+
+            if (!text) {
+                resultBox.innerHTML = "Teks komentar tidak boleh kosong!";
+                return;
+            }
+
+            // Blok try-catch ini berfungsi mencegah web error/tutup saat server mati
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/v1/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Server bermasalah.');
+                }
+
+                const data = await response.json();
+                resultBox.innerHTML = `<strong>Hasil Sentimen:</strong> ${data.label} <br><strong>Skor Keyakinan:</strong> ${data.confidence * 100}%`;
+            
+            } catch (error) {
+                // Ketika server FastAPI dimatikan, kode akan masuk ke sini 
+                // dan hanya menampilkan tulisan peringatan tanpa menutup web.
+                resultBox.innerHTML = "Server tidak dapat dihubungi. Pastikan FastAPI berjalan.";
+            }
+        }
+    </script>
+</body>
+</html>
